@@ -27,7 +27,11 @@ go build -o tglab .
 ./tglab                          # uses the settings file described below
 ./tglab --config path/to/config.yaml
 ./tglab --help                   # also --usage and -h
+./tglab --version
 ```
+
+Prebuilt binaries for macOS, Linux and Windows are attached to each
+[release](https://github.com/allco/tglab/releases).
 
 `--help` prints where the settings file is looked for, which file is in use right now, the full
 default settings, where the token comes from, and the keys.
@@ -155,6 +159,21 @@ go vet ./...
 | `config.go` | settings file lookup, defaults, label patterns, token lookup |
 | `gitlab.go` | GraphQL queries and client |
 | `ui.go` | the Bubble Tea app: table rendering, keys, refresh loop |
+
+### CI and releases
+
+- `.github/workflows/ci.yml` checks formatting, vets, tests and builds on every push to `main`.
+- `.github/workflows/release.yml` runs when a semver tag is pushed. It tests, builds for macOS,
+  Linux and Windows (amd64 and arm64) with the tag as the version, and creates a GitHub release
+  with the archives and a `checksums.txt`. A tag with a suffix, like `v1.1.0-rc.1`, becomes a
+  pre-release.
+
+To release:
+
+```sh
+git tag v1.0.0
+git push origin v1.0.0
+```
 
 It uses the GitLab GraphQL API (`/api/graphql`) and the
 [Bubble Tea](https://github.com/charmbracelet/bubbletea) and

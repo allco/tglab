@@ -10,8 +10,12 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// version is set at release build time with -ldflags "-X main.version=v1.2.3".
+var version = "dev"
+
 func main() {
 	configFlag := flag.String("config", "", "path to the settings file")
+	showVersion := flag.Bool("version", false, "print the version")
 	var help bool
 	for _, name := range []string{"help", "h", "usage"} {
 		flag.BoolVar(&help, name, false, "show this help")
@@ -20,6 +24,10 @@ func main() {
 	flag.Parse()
 	if help {
 		printUsage(os.Stdout, *configFlag)
+		return
+	}
+	if *showVersion {
+		fmt.Println("tglab", version)
 		return
 	}
 
@@ -55,16 +63,17 @@ func printUsage(w io.Writer, configFlag string) {
 		state = "missing, created with the defaults below on first run"
 	}
 
-	fmt.Fprintf(w, `tglab — keeps showing the GitLab merge requests you opened, or all open MRs in your projects.
+	fmt.Fprintf(w, `tglab %s — keeps showing the GitLab merge requests you opened, or all open MRs in your projects.
 
 Usage:
   tglab [--config <path>]
-  tglab --help | --usage
+  tglab --help | --usage | --version
 
 Options:
   --config <path>   settings file to use
   -h, --help, --usage
                     show this help
+  --version         print the version
 
 Settings file (YAML), first match wins:
   1. --config <path>
@@ -87,7 +96,7 @@ Keys:
   a              switch between my MRs (default) and all MRs in the projects
   r              refresh now
   q, ctrl+c      quit
-`, defaultConfigPath(), path, state, indent(defaultConfig, "  "))
+`, version, defaultConfigPath(), path, state, indent(defaultConfig, "  "))
 }
 
 func indent(s, prefix string) string {
