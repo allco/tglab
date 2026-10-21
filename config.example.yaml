@@ -1,0 +1,20 @@
+# tglab settings
+
+# GitLab host (without scheme).
+host: gitlab.com
+
+# Projects to watch (full paths). Leave empty to show your open MRs across all projects.
+projects: []
+#  - my-group/my-project
+
+# How often to refresh, e.g. 30s, 1m, 5m.
+refresh_interval: 60s
+
+# Labels to hide: regular expressions matched against the label name. Quote them,
+# since a trailing ":" is YAML syntax.
+hide_labels: []
+#  - "^platform::"
+
+# Personal access token (read_api scope). Optional: if empty, GITLAB_TOKEN is used,
+# then the token stored by glab ("glab auth login").
+# token: glpat-...

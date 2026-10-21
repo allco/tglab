@@ -1,0 +1,21 @@
+# Binaries
+/tglab
+/bin/
+/dist/
+*.exe
+*.test
+*.out
+
+# Local settings (may contain a token)
+tglab.yaml
+
+# Go
+/vendor/
+go.work
+go.work.sum
+
+# Editors / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
