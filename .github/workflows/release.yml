@@ -42,9 +42,12 @@ jobs:
               -o "build/$name/$bin" .
             cp README.md config.example.yaml "build/$name/"
 
+            # The bare binary, plus an archive with the README and example settings.
             if [ "$os" = windows ]; then
+              cp "build/$name/$bin" "dist/$name.exe"
               (cd build && zip -qr "../dist/$name.zip" "$name")
             else
+              cp "build/$name/$bin" "dist/$name"
               tar -C build -czf "dist/$name.tar.gz" "$name"
             fi
           done

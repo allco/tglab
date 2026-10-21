@@ -165,7 +165,7 @@ go vet ./...
 - `.github/workflows/ci.yml` checks formatting, vets, tests and builds on every push to `main`.
 - `.github/workflows/release.yml` runs when a semver tag is pushed. It tests, builds for macOS,
   Linux and Windows (amd64 and arm64) with the tag as the version, and creates a GitHub release
-  with the archives and a `checksums.txt`. A tag with a suffix, like `v1.1.0-rc.1`, becomes a
+  with each binary, an archive per platform and a `checksums.txt`. A tag with a suffix, like `v1.1.0-rc.1`, becomes a
   pre-release.
 
 To release:
