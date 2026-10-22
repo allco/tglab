@@ -27,9 +27,9 @@ func TestScreenshots(t *testing.T) {
 		all    bool
 		height int
 	}{
-		{name: "my-mrs", height: 11},
-		{name: "selected", keys: "jjjjj", height: 13}, // selects !398, whose labels overflow
-		{name: "all-mrs", all: true, height: 15},
+		{name: "my-mrs", height: 12},
+		{name: "selected", keys: "jjjjj", height: 14}, // selects !398, whose labels overflow
+		{name: "all-mrs", all: true, height: 16},
 	}
 	for _, shot := range shots {
 		m := newModel(cfg, nil)
