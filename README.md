@@ -4,15 +4,17 @@ A terminal dashboard for GitLab merge requests. It keeps showing the open MRs yo
 open MR in your projects, with pipeline, approvals, open threads, merge status, merge train position
 and labels, and refreshes on a timer.
 
-```
-My open MRs (3)  gitlab.com · my-group/my-project
-   MR      Title                                     Labels               Pipeline    Approvals  Threads  Status           Updated
-   !412    Add offline mode to the settings scre…    priority::next       ✔ passed    ✔          -        in train #2      4m
-●  !409    Draft: Migrate the login flow to the …    -                    ✘ failed    0/1        1 open   draft            9m
-   !398    Fix crash when the map has no tiles       bug                  ✔ passed    ✔          -        ready to merge   5h
-updated 16:54:18 · every 1m0s  ● 1 changed
-↑/↓ select · enter/o open · esc deselect · a all MRs · r refresh · q quit
-```
+![My open MRs](docs/screenshots/my-mrs.png)
+
+The selected row expands to show the full title and every label:
+
+![A selected MR](docs/screenshots/selected.png)
+
+`a` switches to every open MR in the project, with an Author column:
+
+![All open MRs](docs/screenshots/all-mrs.png)
+
+The screenshots use made-up data.
 
 ## Requirements
 
@@ -164,9 +166,14 @@ go test ./...
 go vet ./...
 ```
 
+To regenerate the screenshots after a UI change, install
+[freeze](https://github.com/charmbracelet/freeze) and Google Chrome, then run
+`./scripts/screenshots.sh`.
+
 | File | Contains |
 |---|---|
 | `docs/configuration.md` | settings reference and examples |
+| `screenshot_test.go`, `scripts/screenshots.sh` | renders the README screenshots from made-up MRs |
 | `main.go` | flags, `--help` text, startup |
 | `config.go` | settings file lookup, defaults, label patterns, token lookup |
 | `gitlab.go` | GraphQL queries and client |

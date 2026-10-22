@@ -447,27 +447,14 @@ func labelsCell(labels []Label, width int, wrap bool) string {
 	if len(labels) == 0 {
 		return dimStyle.Render("-")
 	}
+	if !wrap {
+		return labelsLine(labels, width)
+	}
 	var lines []string
 	line, lineWidth := "", 0
-	for i, l := range labels {
-		name := l.Title
-		if r := []rune(name); len(r) > width-2 {
-			name = string(r[:max(1, width-3)]) + "…"
-		}
-		pill := lipgloss.NewStyle().
-			Background(lipgloss.Color(l.Color)).
-			Foreground(lipgloss.Color(l.TextColor)).
-			Render(" " + name + " ")
-		w := lipgloss.Width(pill)
-		if !wrap {
-			more := ""
-			if rest := len(labels) - i - 1; rest > 0 {
-				more = fmt.Sprintf(" +%d", rest)
-			}
-			if lineWidth > 0 && lineWidth+1+w+len(more) > width {
-				return line + dimStyle.Render(fmt.Sprintf(" +%d", len(labels)-i))
-			}
-		}
+	for _, l := range labels {
+		p := pill(l, width)
+		w := lipgloss.Width(p)
 		if lineWidth > 0 && lineWidth+1+w > width {
 			lines = append(lines, line)
 			line, lineWidth = "", 0
@@ -476,10 +463,56 @@ func labelsCell(labels []Label, width int, wrap bool) string {
 			line += " "
 			lineWidth++
 		}
-		line += pill
+		line += p
 		lineWidth += w
 	}
 	return strings.Join(append(lines, line), "\n")
+}
+
+// labelsLine packs pills onto one line of at most width, always leaving room for the "+N" that
+// counts the labels left out. When even the first pill doesn't fit next to it, that pill shrinks.
+func labelsLine(labels []Label, width int) string {
+	more := func(n int) string {
+		if n == 0 {
+			return ""
+		}
+		return fmt.Sprintf(" +%d", n)
+	}
+	line, used := "", 0
+	for i, l := range labels {
+		rest := len(labels) - i - 1
+		sep := 0
+		if used > 0 {
+			sep = 1
+		}
+		p := pill(l, width)
+		if w := lipgloss.Width(p); used+sep+w+len(more(rest)) <= width {
+			if sep > 0 {
+				line += " "
+			}
+			line += p
+			used += sep + w
+			continue
+		}
+		if used > 0 {
+			// The previous step reserved room for exactly this count.
+			return line + dimStyle.Render(more(len(labels)-i))
+		}
+		return pill(l, width-len(more(rest))) + dimStyle.Render(more(rest))
+	}
+	return line
+}
+
+// pill renders one label in its GitLab colours, truncating the name so the pill fits in width.
+func pill(l Label, width int) string {
+	name := l.Title
+	if r := []rune(name); len(r) > width-2 {
+		name = string(r[:max(1, width-3)]) + "…"
+	}
+	return lipgloss.NewStyle().
+		Background(lipgloss.Color(l.Color)).
+		Foreground(lipgloss.Color(l.TextColor)).
+		Render(" " + name + " ")
 }
 
 func pipelineCell(s string) string {

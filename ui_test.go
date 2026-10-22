@@ -30,6 +30,11 @@ func TestLabelsCellWraps(t *testing.T) {
 	if strings.Contains(one, "\n") || lipgloss.Width(one) > width || !strings.HasSuffix(ansi.Strip(one), "+3") {
 		t.Errorf("unwrapped labels should be one line ending in +3, got %q", ansi.Strip(one))
 	}
+	// A first label that only just fits must shrink to leave room for the count.
+	tight := labelsCell([]Label{{"autoreview::running", "#428BCA", "#FFFFFF"}, {"ux", "#9400D3", "#FFFFFF"}}, 23, false)
+	if strings.Contains(tight, "\n") || lipgloss.Width(tight) > 23 || !strings.HasSuffix(ansi.Strip(tight), "+1") {
+		t.Errorf("tight labels should be one line of at most 23 ending in +1, got %q (%d wide)", ansi.Strip(tight), lipgloss.Width(tight))
+	}
 	if got := labelsCell(nil, width, false); lipgloss.Width(got) != 1 {
 		t.Errorf("no labels should render as a dash, got %q", got)
 	}
