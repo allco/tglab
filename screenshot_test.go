@@ -34,6 +34,7 @@ func TestScreenshots(t *testing.T) {
 	for _, shot := range shots {
 		m := newModel(cfg, nil)
 		m.loading = false
+		m.splash = false
 		m.me = "jane.doe"
 		m.all = shot.all
 		next, _ := m.Update(tea.WindowSizeMsg{Width: 150, Height: shot.height})

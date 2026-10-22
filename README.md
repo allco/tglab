@@ -112,6 +112,10 @@ The first of these that is set is used:
 
 ## Views and refreshing
 
+On start, a `tglab` splash shows while the first load runs (at least 1.2 seconds); any key skips
+it. After that, a small logo sits in the bottom-right corner, beside the status and help lines, whenever
+the rows and the window leave room for it.
+
 Each refresh fetches every open MR in the configured `projects` in one request per project. "My
 MRs" is that list filtered to MRs you authored, so `a` switches views instantly without a new
 request. In the all view an **Author** column appears, with your own username highlighted.
@@ -178,6 +182,7 @@ To regenerate the screenshots after a UI change, install
 | `config.go` | settings file lookup, defaults, label patterns, token lookup |
 | `gitlab.go` | GraphQL queries and client |
 | `ui.go` | the Bubble Tea app: table rendering, keys, refresh loop |
+| `splash.go` | the start-up splash and the corner logo |
 
 ### CI and releases
 

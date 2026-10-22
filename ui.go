@@ -62,6 +62,8 @@ type model struct {
 	prev    map[string]string // webUrl -> signature from the previous refresh
 	changed map[string]bool   // MRs whose signature changed on the last refresh
 
+	splash     bool // the start-up splash is showing
+	splashUp   bool // the splash has been up for splashMin
 	loading    bool
 	gen        int // invalidates stale ticks after a manual refresh
 	lastUpdate time.Time
@@ -72,11 +74,11 @@ type model struct {
 
 func newModel(cfg Config, client *Client) model {
 	sp := spinner.New(spinner.WithSpinner(spinner.Dot))
-	return model{cfg: cfg, client: client, spinner: sp, loading: true, cursor: -1, changed: map[string]bool{}}
+	return model{cfg: cfg, client: client, spinner: sp, splash: true, loading: true, cursor: -1, changed: map[string]bool{}}
 }
 
 func (m model) Init() tea.Cmd {
-	return tea.Batch(m.fetchCmd(), m.spinner.Tick)
+	return tea.Batch(m.fetchCmd(), m.spinner.Tick, splashCmd())
 }
 
 func (m model) fetchCmd() tea.Cmd {
@@ -102,7 +104,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.scroll()
 		return m, nil
 
+	case splashDoneMsg:
+		m.splashUp = true
+		m.splash = m.splash && m.loading
+		return m, nil
+
 	case tea.KeyMsg:
+		m.splash = false // any key skips the splash, and still does what it does
 		switch msg.String() {
 		case "q", "ctrl+c":
 			return m, tea.Quit
@@ -142,6 +150,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case mrsMsg:
 		m.loading = false
+		m.splash = m.splash && !m.splashUp
 		m.gen++
 		if msg.err != nil {
 			m.err = msg.err
@@ -375,6 +384,9 @@ func (m model) View() string {
 	if m.width == 0 {
 		return ""
 	}
+	if m.splash {
+		return m.splashView()
+	}
 	scope := "all projects"
 	if len(m.cfg.Projects) > 0 {
 		scope = strings.Join(m.cfg.Projects, ", ")
@@ -400,6 +412,7 @@ func (m model) View() string {
 	if len(body) > avail {
 		body = body[:avail]
 	}
+	empty := avail - len(body)
 	for len(body) < avail {
 		body = append(body, "")
 	}
@@ -430,6 +443,13 @@ func (m model) View() string {
 		toggle = "a my MRs"
 	}
 	help := dimStyle.Render("↑/↓ select · enter/o open · esc deselect · " + toggle + " · r refresh · q quit")
+
+	// The small logo spans the last body line, the status and the help, with an empty line above it.
+	if empty >= 2 && avail > 0 {
+		if tail, ok := withCornerLogo([]string{body[avail-1], status, help}, m.width); ok {
+			body[avail-1], status, help = tail[0], tail[1], tail[2]
+		}
+	}
 
 	return strings.Join([]string{
 		title,

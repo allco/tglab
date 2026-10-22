@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 )
@@ -37,5 +39,61 @@ func TestLabelsCellWraps(t *testing.T) {
 	}
 	if got := labelsCell(nil, width, false); lipgloss.Width(got) != 1 {
 		t.Errorf("no labels should render as a dash, got %q", got)
+	}
+}
+
+func TestSplash(t *testing.T) {
+	update := func(m model, msg tea.Msg) model {
+		next, _ := m.Update(msg)
+		return next.(model)
+	}
+	start := func() model {
+		return update(newModel(Config{Host: "gitlab.com"}, nil), tea.WindowSizeMsg{Width: 100, Height: 30})
+	}
+	shows := func(m model) bool { return strings.Contains(ansi.Strip(m.View()), "████") }
+
+	// A quick first load keeps the splash up until splashMin has passed.
+	m := start()
+	if !shows(m) {
+		t.Fatal("splash not shown at start")
+	}
+	m = update(m, mrsMsg{})
+	if !shows(m) {
+		t.Error("splash gone before splashMin")
+	}
+	if m = update(m, splashDoneMsg{}); shows(m) {
+		t.Error("splash still shown after splashMin and the first load")
+	}
+
+	// A slow first load keeps it up until the load ends.
+	m = update(start(), splashDoneMsg{})
+	if !shows(m) {
+		t.Error("splash gone while the first load is running")
+	}
+	if m = update(m, mrsMsg{}); shows(m) {
+		t.Error("splash still shown after the first load")
+	}
+
+	// Any key skips it.
+	if m = update(start(), tea.KeyMsg{Type: tea.KeyEsc}); shows(m) {
+		t.Error("splash still shown after a key press")
+	}
+
+	// A narrow window gets a plain title instead of the logo.
+	m = update(newModel(Config{Host: "gitlab.com"}, nil), tea.WindowSizeMsg{Width: 30, Height: 10})
+	if v := ansi.Strip(m.View()); !strings.Contains(v, "tglab") || strings.Contains(v, "████") {
+		t.Errorf("narrow splash:\n%s", v)
+	}
+}
+
+func TestCornerLogo(t *testing.T) {
+	lines := []string{"", "updated 12:00:00", "q quit"}
+	got, ok := withCornerLogo(lines, 40)
+	if !ok || !strings.HasPrefix(got[2], "q quit") || !strings.HasSuffix(ansi.Strip(got[2]), "┗━┛") || lipgloss.Width(got[2]) != 39 {
+		t.Errorf("logo not at the right of the lines: %q", got)
+	}
+	// A line too long to share with the logo leaves them all unchanged.
+	if got, ok := withCornerLogo([]string{"", strings.Repeat("x", 25), ""}, 40); ok || strings.Join(got, "") != strings.Repeat("x", 25) {
+		t.Errorf("logo drawn over a long line: %q", got)
 	}
 }
