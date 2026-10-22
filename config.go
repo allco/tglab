@@ -18,24 +18,44 @@ type Config struct {
 	Token           string        `yaml:"token"`
 	Projects        []string      `yaml:"projects"`
 	RefreshInterval time.Duration `yaml:"refresh_interval"`
+	ShowLabels      []string      `yaml:"show_labels"`
 	HideLabels      []string      `yaml:"hide_labels"`
 
+	showLabels []*regexp.Regexp
 	hideLabels []*regexp.Regexp
 }
 
-// visibleLabels drops the labels matching any hide_labels pattern.
+// visibleLabels keeps the labels matching a show_labels pattern (all of them when there are
+// none), then drops those matching a hide_labels pattern.
 func (c Config) visibleLabels(labels []Label) []Label {
 	var out []Label
-next:
 	for _, l := range labels {
-		for _, re := range c.hideLabels {
-			if re.MatchString(l.Title) {
-				continue next
-			}
+		if (len(c.showLabels) == 0 || matchAny(c.showLabels, l.Title)) && !matchAny(c.hideLabels, l.Title) {
+			out = append(out, l)
 		}
-		out = append(out, l)
 	}
 	return out
+}
+
+func matchAny(res []*regexp.Regexp, s string) bool {
+	for _, re := range res {
+		if re.MatchString(s) {
+			return true
+		}
+	}
+	return false
+}
+
+func compilePatterns(path, key string, patterns []string) ([]*regexp.Regexp, error) {
+	var res []*regexp.Regexp
+	for _, p := range patterns {
+		re, err := regexp.Compile(p)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %s: %w", path, key, err)
+		}
+		res = append(res, re)
+	}
+	return res, nil
 }
 
 const defaultConfig = `# tglab settings
@@ -50,8 +70,13 @@ projects: []
 # How often to refresh, e.g. 30s, 1m, 5m.
 refresh_interval: 60s
 
-# Labels to hide: regular expressions matched against the label name. Quote them,
-# since a trailing ":" is YAML syntax.
+# Labels to show: regular expressions matched against the label name. When set, only
+# matching labels are shown; when empty, all are. Quote them, since a trailing ":" is
+# YAML syntax.
+show_labels: []
+#  - "^autoreview::"
+
+# Labels to hide, applied after show_labels.
 hide_labels: []
 #  - "^platform::"
 
@@ -99,12 +124,11 @@ func loadConfig(path string) (Config, bool, error) {
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return Config{}, false, fmt.Errorf("parse %s: %w", path, err)
 	}
-	for _, p := range cfg.HideLabels {
-		re, err := regexp.Compile(p)
-		if err != nil {
-			return Config{}, false, fmt.Errorf("%s: hide_labels: %w", path, err)
-		}
-		cfg.hideLabels = append(cfg.hideLabels, re)
+	if cfg.showLabels, err = compilePatterns(path, "show_labels", cfg.ShowLabels); err != nil {
+		return Config{}, false, err
+	}
+	if cfg.hideLabels, err = compilePatterns(path, "hide_labels", cfg.HideLabels); err != nil {
+		return Config{}, false, err
 	}
 	if cfg.Host == "" {
 		cfg.Host = "gitlab.com"

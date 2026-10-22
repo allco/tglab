@@ -316,7 +316,7 @@ func (m model) renderRow(i int, cols []column) string {
 		pipelineCell(mr.PipelineStatus()),
 		text.Render(approvalsCell(mr)),
 		text.Render(threadsCell(mr.UnresolvedThreads())),
-		text.Render(statusCell(mr)),
+		text.Foreground(statusColor(statusCell(mr))).Render(statusCell(mr)),
 		text.Render(ago(mr.UpdatedAt)),
 	)
 
@@ -525,6 +525,25 @@ func threadsCell(n int) string {
 		return "-"
 	}
 	return fmt.Sprintf("%d open", n)
+}
+
+// statusColor colours a status by what it asks of you: green ready, red broken, amber needs
+// action, blue waiting on CI, purple merging on its own, grey not ready yet.
+func statusColor(status string) lipgloss.Color {
+	switch {
+	case status == "ready to merge":
+		return lipgloss.Color("42")
+	case status == "conflicts", status == "blocked":
+		return lipgloss.Color("196")
+	case status == "needs approval", status == "open threads", status == "needs rebase":
+		return lipgloss.Color("214")
+	case status == "waiting for CI":
+		return lipgloss.Color("39")
+	case strings.HasPrefix(status, "in train"), status == "train after CI", status == "auto-merge":
+		return lipgloss.Color("135")
+	default: // draft, checking, anything new from GitLab
+		return lipgloss.Color("245")
+	}
 }
 
 func statusCell(mr MR) string {

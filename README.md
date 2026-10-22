@@ -58,8 +58,13 @@ projects: []
 # How often to refresh, e.g. 30s, 1m, 5m.
 refresh_interval: 60s
 
-# Labels to hide: regular expressions matched against the label name. Quote them,
-# since a trailing ":" is YAML syntax.
+# Labels to show: regular expressions matched against the label name. When set, only
+# matching labels are shown; when empty, all are. Quote them, since a trailing ":" is
+# YAML syntax.
+show_labels: []
+#  - "^autoreview::"
+
+# Labels to hide, applied after show_labels.
 hide_labels: []
 #  - "^platform::"
 
@@ -72,7 +77,8 @@ hide_labels: []
 | `host` | `gitlab.com` | A leading `https://` and a trailing `/` are stripped. |
 | `projects` | `[]` | Full project paths. Empty means your MRs in every project, and no "all" view. |
 | `refresh_interval` | `60s` | Any Go duration. Values under `10s` are raised to `10s`. |
-| `hide_labels` | `[]` | Go regular expressions. An invalid one stops the app at startup with an error. |
+| `show_labels` | `[]` | Go regular expressions. When set, only matching labels are shown. An invalid one stops the app at startup with an error. |
+| `hide_labels` | `[]` | Go regular expressions, applied after `show_labels`. An invalid one stops the app at startup. |
 | `token` | none | See [Token](#token). |
 
 `./tglab.yaml` is listed in `.gitignore`, since it may hold a token.
@@ -124,7 +130,8 @@ longer shown.
 | Status | see below |
 | Updated | time since the MR was last updated |
 
-**Status**, the first that applies:
+**Status**, the first that applies. It's coloured by what it asks of you: green ready, red
+broken, amber needs action, blue waiting on CI, purple merging on its own, grey not ready yet.
 
 | Shows | Means |
 |---|---|
@@ -143,7 +150,8 @@ the marked MRs in the current view, e.g. `● 2 changed`.
 ## Labels
 
 Each label is a pill in its GitLab background and text colours, sorted alphabetically ignoring
-case. Labels matching any `hide_labels` pattern are left out. On a normal row the labels stay on
+case. If `show_labels` is set, only labels matching one of its patterns are shown; then labels
+matching any `hide_labels` pattern are left out. On a normal row the labels stay on
 one line and any that don't fit are counted as `+N`; the selected row expands to show them all.
 
 ## Development
@@ -162,7 +170,7 @@ go vet ./...
 
 ### CI and releases
 
-- `.github/workflows/ci.yml` checks formatting, vets, tests and builds on every push to `main`.
+- `.github/workflows/post-merge.yml` ("Post merge") checks formatting, vets, tests and builds on every push to `main`.
 - `.github/workflows/release.yml` runs when a semver tag is pushed. It tests, builds for macOS,
   Linux and Windows (amd64 and arm64) with the tag as the version, and creates a GitHub release
   with each binary, an archive per platform and a `checksums.txt`. A tag with a suffix, like `v1.1.0-rc.1`, becomes a

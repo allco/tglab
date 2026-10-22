@@ -10,8 +10,13 @@ projects: []
 # How often to refresh, e.g. 30s, 1m, 5m.
 refresh_interval: 60s
 
-# Labels to hide: regular expressions matched against the label name. Quote them,
-# since a trailing ":" is YAML syntax.
+# Labels to show: regular expressions matched against the label name. When set, only
+# matching labels are shown; when empty, all are. Quote them, since a trailing ":" is
+# YAML syntax.
+show_labels: []
+#  - "^autoreview::"
+
+# Labels to hide, applied after show_labels.
 hide_labels: []
 #  - "^platform::"
 
