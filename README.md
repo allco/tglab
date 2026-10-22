@@ -38,6 +38,9 @@ default settings, where the token comes from, and the keys.
 
 ## Settings
 
+The full reference, with examples for common setups and a troubleshooting table, is in
+[docs/configuration.md](docs/configuration.md).
+
 The settings file is YAML. The first of these that exists is used:
 
 1. the path given with `--config <path>`
@@ -163,6 +166,7 @@ go vet ./...
 
 | File | Contains |
 |---|---|
+| `docs/configuration.md` | settings reference and examples |
 | `main.go` | flags, `--help` text, startup |
 | `config.go` | settings file lookup, defaults, label patterns, token lookup |
 | `gitlab.go` | GraphQL queries and client |
