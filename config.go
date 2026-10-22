@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -143,17 +144,34 @@ func loadConfig(path string) (Config, bool, error) {
 	return cfg, created, nil
 }
 
-// resolveToken uses the config token, then GITLAB_TOKEN, then glab's stored token.
-func resolveToken(cfg Config) (string, error) {
+// resolveToken uses the config token, then GITLAB_TOKEN, then glab's stored token. fromGlab
+// reports the last case: glab's OAuth tokens expire, so the client has to keep re-reading it.
+func resolveToken(cfg Config) (token string, fromGlab bool, err error) {
 	if cfg.Token != "" {
-		return cfg.Token, nil
+		return cfg.Token, false, nil
 	}
 	if t := os.Getenv("GITLAB_TOKEN"); t != "" {
-		return t, nil
+		return t, false, nil
 	}
-	out, err := exec.Command("glab", "config", "get", "token", "--host", cfg.Host).Output()
-	if t := strings.TrimSpace(string(out)); err == nil && t != "" {
-		return t, nil
+	if t, err := glabToken(cfg.Host); err == nil {
+		return t, true, nil
 	}
-	return "", fmt.Errorf("no GitLab token: set `token` in the config, export GITLAB_TOKEN, or run `glab auth login --hostname %s`", cfg.Host)
+	return "", false, fmt.Errorf("no GitLab token: set `token` in the config, export GITLAB_TOKEN, or run `glab auth login --hostname %s`", cfg.Host)
+}
+
+// glabToken returns the token glab currently stores for host.
+func glabToken(host string) (string, error) {
+	out, err := exec.Command("glab", "config", "get", "token", "--host", host).Output()
+	t := strings.TrimSpace(string(out))
+	if err != nil || t == "" {
+		return "", fmt.Errorf("glab has no token for %s", host)
+	}
+	return t, nil
+}
+
+// renewGlabToken gets glab to renew an expired OAuth token, which it does before any API call of
+// its own, and returns the token it stores afterwards.
+func renewGlabToken(ctx context.Context, host string) (string, error) {
+	_ = exec.CommandContext(ctx, "glab", "api", "user", "--hostname", host).Run()
+	return glabToken(host)
 }

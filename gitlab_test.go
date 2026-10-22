@@ -1,7 +1,12 @@
 package main
 
 import (
+	"context"
+	"errors"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -56,5 +61,32 @@ func TestShowLabels(t *testing.T) {
 	})
 	if len(got) != 2 || got[0].Title != "autoreview::clean" || got[1].Title != "bug" {
 		t.Errorf("got %v", got)
+	}
+}
+
+func TestExpiredGlabTokenIsRenewed(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer fresh" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		w.Write([]byte(`{"data":{"currentUser":{"username":"jane","authoredMergeRequests":{"pageInfo":{"hasNextPage":false},"nodes":[{"iid":"1"}]}}}}`))
+	}))
+	defer srv.Close()
+
+	renewed := 0
+	c := &Client{baseURL: srv.URL, http: srv.Client(), token: "expired",
+		reload: func() (string, error) { return "expired", nil },
+		renew:  func(context.Context) (string, error) { renewed++; return "fresh", nil },
+	}
+	mrs, me, err := c.FetchMRs(context.Background(), nil)
+	if err != nil || me != "jane" || len(mrs) != 1 || renewed != 1 {
+		t.Fatalf("got mrs=%v me=%q err=%v renewed=%d", mrs, me, err, renewed)
+	}
+
+	// A token that isn't from glab is never renewed; the 401 is reported as is.
+	c = &Client{baseURL: srv.URL, http: srv.Client(), token: "wrong"}
+	if _, _, err := c.FetchMRs(context.Background(), nil); !errors.Is(err, errUnauthorized) || strings.Contains(err.Error(), "glab") {
+		t.Fatalf("want a plain 401, got %v", err)
 	}
 }

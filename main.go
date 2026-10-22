@@ -40,12 +40,12 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Created default settings at %s\n", path)
 	}
 
-	token, err := resolveToken(cfg)
+	token, fromGlab, err := resolveToken(cfg)
 	if err != nil {
 		fail(err)
 	}
 
-	p := tea.NewProgram(newModel(cfg, NewClient(cfg.Host, token)), tea.WithAltScreen())
+	p := tea.NewProgram(newModel(cfg, NewClient(cfg.Host, token, fromGlab)), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fail(err)
 	}

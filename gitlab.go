@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -109,13 +111,37 @@ func (m MR) Signature() string {
 }
 
 type Client struct {
-	host  string
+	baseURL string // https://<host>
+	http    *http.Client
+
+	mu    sync.Mutex
 	token string
-	http  *http.Client
+	// Set when the token comes from glab: reload re-reads it, renew makes glab renew it first.
+	reload func() (string, error)
+	renew  func(context.Context) (string, error)
 }
 
-func NewClient(host, token string) *Client {
-	return &Client{host: host, token: token, http: &http.Client{Timeout: 30 * time.Second}}
+func NewClient(host, token string, fromGlab bool) *Client {
+	c := &Client{baseURL: "https://" + host, token: token, http: &http.Client{Timeout: 30 * time.Second}}
+	if fromGlab {
+		c.reload = func() (string, error) { return glabToken(host) }
+		c.renew = func(ctx context.Context) (string, error) { return renewGlabToken(ctx, host) }
+	}
+	return c
+}
+
+var errUnauthorized = errors.New("401 Unauthorized")
+
+func (c *Client) currentToken() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.token
+}
+
+func (c *Client) setToken(t string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.token = t
 }
 
 type mrPage struct {
@@ -126,20 +152,40 @@ type mrPage struct {
 	Nodes []MR `json:"nodes"`
 }
 
+// graphql runs one query. A glab token rejected as expired is renewed through glab and the query
+// retried once.
 func (c *Client) graphql(ctx context.Context, query string, vars map[string]any, data any) error {
+	err := c.post(ctx, query, vars, data)
+	if c.renew == nil || !errors.Is(err, errUnauthorized) {
+		return err
+	}
+	if t, rerr := c.renew(ctx); rerr == nil && t != "" {
+		c.setToken(t)
+		err = c.post(ctx, query, vars, data)
+	}
+	if errors.Is(err, errUnauthorized) {
+		return fmt.Errorf("%w (the glab login may have expired: run `glab auth login`)", err)
+	}
+	return err
+}
+
+func (c *Client) post(ctx context.Context, query string, vars map[string]any, data any) error {
 	body, _ := json.Marshal(map[string]any{"query": query, "variables": vars})
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://"+c.host+"/api/graphql", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/api/graphql", bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+c.token)
+	req.Header.Set("Authorization", "Bearer "+c.currentToken())
 
 	resp, err := c.http.Do(req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusUnauthorized {
+		return fmt.Errorf("GitLab API: %w", errUnauthorized)
+	}
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("GitLab API: %s", resp.Status)
 	}
@@ -226,6 +272,12 @@ func (c *Client) fetchAll(ctx context.Context, project string) (string, []MR, er
 // current user's username. With no projects it returns the user's own open MRs everywhere, since
 // every MR on the host is not a useful list.
 func (c *Client) FetchMRs(ctx context.Context, projects []string) ([]MR, string, error) {
+	// glab may have renewed its token since the last refresh, e.g. when another glab command ran.
+	if c.reload != nil {
+		if t, err := c.reload(); err == nil {
+			c.setToken(t)
+		}
+	}
 	if len(projects) == 0 {
 		me, mrs, err := c.fetchMine(ctx, nil)
 		sortLabels(mrs)
