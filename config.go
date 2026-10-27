@@ -21,9 +21,11 @@ type Config struct {
 	RefreshInterval time.Duration `yaml:"refresh_interval"`
 	ShowLabels      []string      `yaml:"show_labels"`
 	HideLabels      []string      `yaml:"hide_labels"`
+	Sort            string        `yaml:"sort"`
 
 	showLabels []*regexp.Regexp
 	hideLabels []*regexp.Regexp
+	sort       sortOrder
 }
 
 // visibleLabels keeps the labels matching a show_labels pattern (all of them when there are
@@ -81,6 +83,11 @@ show_labels: []
 hide_labels: []
 #  - "^platform::"
 
+# Starting row order: updated, mr, project, author, title, pipeline, approvals, threads or
+# status, optionally followed by asc or desc; or none, for the order GitLab sends. s and S
+# change it while tglab runs.
+sort: updated desc
+
 # Personal access token (read_api scope). Optional: if empty, GITLAB_TOKEN is used,
 # then the token stored by glab ("glab auth login").
 # token: glpat-...
@@ -130,6 +137,9 @@ func loadConfig(path string) (Config, bool, error) {
 	}
 	if cfg.hideLabels, err = compilePatterns(path, "hide_labels", cfg.HideLabels); err != nil {
 		return Config{}, false, err
+	}
+	if cfg.sort, err = parseSort(cfg.Sort); err != nil {
+		return Config{}, false, fmt.Errorf("%s: %w", path, err)
 	}
 	if cfg.Host == "" {
 		cfg.Host = "gitlab.com"

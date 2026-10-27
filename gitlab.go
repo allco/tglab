@@ -268,8 +268,8 @@ func (c *Client) fetchAll(ctx context.Context, project string) (string, []MR, er
 	return me, mrs, nil
 }
 
-// FetchMRs returns every open MR in the given projects, most recently updated first, plus the
-// current user's username. With no projects it returns the user's own open MRs everywhere, since
+// FetchMRs returns every open MR in the given projects, in the order GitLab sends them (project by
+// project, each most recently updated first), plus the current user's username. With no projects it returns the user's own open MRs everywhere, since
 // every MR on the host is not a useful list.
 func (c *Client) FetchMRs(ctx context.Context, projects []string) ([]MR, string, error) {
 	// glab may have renewed its token since the last refresh, e.g. when another glab command ran.
@@ -294,7 +294,6 @@ func (c *Client) FetchMRs(ctx context.Context, projects []string) ([]MR, string,
 		}
 		mrs = append(mrs, got...)
 	}
-	sort.SliceStable(mrs, func(i, j int) bool { return mrs[i].UpdatedAt.After(mrs[j].UpdatedAt) })
 	sortLabels(mrs)
 	return mrs, me, nil
 }

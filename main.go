@@ -94,6 +94,8 @@ Keys:
   enter, o       open the selected MR in the browser
   esc            clear the selection
   a              switch between my MRs (default) and all MRs in the projects
+  s              sort by the next column (the header marks it ▲/▼), then none
+  S              reverse the sort
   r              refresh now
   q, ctrl+c      quit
 `, version, defaultConfigPath(), path, state, indent(defaultConfig, "  "))

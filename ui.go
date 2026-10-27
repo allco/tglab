@@ -54,6 +54,7 @@ type model struct {
 	spinner spinner.Model
 
 	all     bool              // every author's MRs instead of just mine
+	sort    sortOrder         // row order, changed with s and S
 	me      string            // current user's username
 	bucket  []MR              // everything fetched; both views filter this, so switching needs no request
 	mrs     []MR              // the rows shown: bucket filtered for the current view
@@ -74,7 +75,7 @@ type model struct {
 
 func newModel(cfg Config, client *Client) model {
 	sp := spinner.New(spinner.WithSpinner(spinner.Dot))
-	return model{cfg: cfg, client: client, spinner: sp, splash: true, loading: true, cursor: -1, changed: map[string]bool{}}
+	return model{cfg: cfg, client: client, sort: cfg.sort, spinner: sp, splash: true, loading: true, cursor: -1, changed: map[string]bool{}}
 }
 
 func (m model) Init() tea.Cmd {
@@ -124,6 +125,23 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.all = !m.all
 			m.offset = 0
 			m.refilter()
+		case "s":
+			// The next key whose column is shown, in its usual direction.
+			for {
+				m.sort.key = (m.sort.key + 1) % len(sortKeys)
+				if m.sortable(m.sort.key) {
+					break
+				}
+			}
+			m.sort.asc = !sortKeys[m.sort.key].desc
+			m.offset = 0
+			m.refilter()
+		case "S":
+			if sortKeys[m.sort.key].cmp != nil {
+				m.sort.asc = !m.sort.asc
+				m.offset = 0
+				m.refilter()
+			}
 		case "r":
 			if !m.loading {
 				m.loading = true
@@ -227,6 +245,7 @@ func (m *model) refilter() {
 			m.mrs = append(m.mrs, mr)
 		}
 	}
+	sortMRs(m.mrs, m.activeSort())
 	m.cursor = -1
 	for i, mr := range m.mrs {
 		if selected != "" && mr.WebURL == selected {
@@ -238,6 +257,26 @@ func (m *model) refilter() {
 }
 
 func (m model) showProject() bool { return len(m.cfg.Projects) != 1 }
+
+// sortable reports whether a sort key's column is shown in the current view.
+func (m model) sortable(key int) bool {
+	switch sortKeys[key].column {
+	case "Project":
+		return m.showProject()
+	case "Author":
+		return m.all
+	}
+	return true
+}
+
+// activeSort is the chosen order, or the first key's usual order while the chosen key's column is
+// hidden (Author in my MRs).
+func (m model) activeSort() sortOrder {
+	if m.sortable(m.sort.key) {
+		return m.sort
+	}
+	return sortOrder{}
+}
 
 // columns sizes the columns to the terminal width; title and labels share what's left.
 func (m model) columns() []column {
@@ -398,9 +437,22 @@ func (m model) View() string {
 	title := titleStyle.Render(fmt.Sprintf("%s (%d)", view, len(m.mrs))) + dimStyle.Render("  "+m.cfg.Host+" · "+scope)
 
 	cols := m.columns()
+	active := m.activeSort()
 	headers := make([]string, len(cols))
 	for i, c := range cols {
-		headers[i] = headerStyle.Width(c.width + colGap).PaddingRight(colGap).Render(c.title)
+		label := c.title
+		if c.title == sortKeys[active.key].column {
+			arrow := "▲"
+			if !active.asc {
+				arrow = "▼"
+			}
+			// The arrow may use one cell of the gap when the column is too narrow for it.
+			label = c.title + " " + arrow
+			if len(c.title)+2 > c.width {
+				label = c.title + arrow
+			}
+		}
+		headers[i] = headerStyle.Width(c.width + colGap).Render(label)
 	}
 	rule := dimStyle.Render(strings.Repeat("─", m.width))
 
@@ -435,6 +487,9 @@ func (m model) View() string {
 	if changed > 0 && !m.loading {
 		status += changeStyle.Render(fmt.Sprintf("  ● %d changed", changed))
 	}
+	if sortKeys[m.sort.key].cmp == nil {
+		status += dimStyle.Render("  · unsorted")
+	}
 	if m.cursor >= 0 {
 		status += dimStyle.Render(fmt.Sprintf("  · %d/%d", m.cursor+1, len(m.mrs)))
 	}
@@ -442,7 +497,7 @@ func (m model) View() string {
 	if m.all {
 		toggle = "a my MRs"
 	}
-	help := dimStyle.Render("↑/↓ select · enter/o open · esc deselect · " + toggle + " · r refresh · q quit")
+	help := dimStyle.Render("↑/↓ select · enter/o open · esc deselect · " + toggle + " · s sort · S reverse · r refresh · q quit")
 
 	// The small logo spans the last body line, the status and the help, with an empty line above it.
 	if empty >= 2 && avail > 0 {
