@@ -27,6 +27,7 @@ covers what you need to keep working on it.
 | `main.go` | flags (`--config`, `--help`/`--usage`, `--version`), help text, startup |
 | `config.go` | settings file lookup and defaults, label patterns, token lookup and glab renewal |
 | `gitlab.go` | GraphQL queries, the `MR` type, the client with its 401 retry |
+| `sort.go` | sort keys (`s` cycles them), the `sort` setting, pipeline and status ranks |
 | `ui.go` | Bubble Tea model: keys, refresh loop, table rendering, status and colours |
 | `splash.go` | start-up splash and the small corner logo |
 | `*_test.go` | unit tests; `screenshot_test.go` renders the README screenshots |
@@ -56,6 +57,10 @@ covers what you need to keep working on it.
 - **Rows:** one line each, with a `+N` overflow for labels that don't fit. The selected row
   expands to show every label, between `┄` dividers. `esc` clears the selection; up with nothing
   selected picks the last row. `●` marks MRs whose `Signature()` changed on the last refresh.
+- **Sorting:** `refilter` sorts the shown rows with `sortMRs`; `FetchMRs` keeps GitLab's order,
+  which is what `none` shows. The zero `sortOrder` is the default, updated descending. A key whose
+  column the view hides (Author in my MRs) falls back to updated; `s` skips it. The Status and
+  Pipeline sorts rank by `statusColor`'s groups and by urgency, not by name.
 - **Status column:** `statusCell` picks one status in this order: `in train #N`, `conflicts`,
   `train after CI`, `in train`, `auto-merge`, then GitLab's `detailedMergeStatus` (`ready to
   merge`, `draft`, `checking`, `waiting for CI`, `needs approval`, `open threads`, `needs rebase`,

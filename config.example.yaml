@@ -20,6 +20,11 @@ show_labels: []
 hide_labels: []
 #  - "^platform::"
 
+# Starting row order: updated, mr, project, author, title, pipeline, approvals, threads or
+# status, optionally followed by asc or desc; or none, for the order GitLab sends. s and S
+# change it while tglab runs.
+sort: updated desc
+
 # Personal access token (read_api scope). Optional: if empty, GITLAB_TOKEN is used,
 # then the token stored by glab ("glab auth login").
 # token: glpat-...

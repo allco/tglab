@@ -108,6 +108,8 @@ The first of these that is set is used:
 | `enter` / `o` | open the selected MR in the browser |
 | `esc` | clear the selection |
 | `a` | switch between my MRs (the default) and all MRs in the projects |
+| `s` | sort by the next column, see [Sorting](#sorting) |
+| `S` | reverse the sort |
 | `r` | refresh now |
 | `q` / `ctrl+c` | quit |
 
@@ -123,6 +125,33 @@ request. In the all view an **Author** column appears, with your own username hi
 
 The selection stays on the same MR across refreshes and view switches, and clears if that MR is no
 longer shown.
+
+## Sorting
+
+The rows start most recently updated first. `s` moves the sort to the next column, and `S`
+reverses it. The sorted column's header is marked `▲` (ascending) or `▼` (descending). Sorting
+works on the MRs already loaded, so it's instant, and the selection stays on the same MR.
+
+`s` goes through the columns in this order, each starting in its more useful direction:
+
+| Sort | First `s` puts on top | |
+|---|---|---|
+| Updated | most recently updated | ▼ |
+| MR | the highest MR number | ▼ |
+| Project | A to Z, ignoring case (only when the column is shown) | ▲ |
+| Author | A to Z, ignoring case (only in the all view) | ▲ |
+| Title | A to Z, ignoring case | ▲ |
+| Pipeline | failed, canceled, manual, running, pending, passed, skipped, none | ▲ |
+| Approvals | the most approvals still missing | ▼ |
+| Threads | the most open threads | ▼ |
+| Status | broken, needs action, waiting for CI, ready, merging on its own, checking, draft | ▲ |
+| none | no sort: the order GitLab sends, project by project, each most recently updated first | |
+
+After none, `s` starts again at Updated. While the rows are unsorted, the status line says
+`unsorted`. Ties are broken by the most recent update. A sort on a column the current view
+hides, such as Author in my MRs, falls back to Updated until the column is shown again.
+
+The [`sort`](docs/configuration.md#sort) setting picks the order tglab starts with.
 
 ## Columns
 

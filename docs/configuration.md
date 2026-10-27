@@ -32,6 +32,7 @@ It prints the lookup order, the file in use, whether it exists, and the full def
 | [`refresh_interval`](#refresh_interval) | duration | `60s` |
 | [`show_labels`](#show_labels-and-hide_labels) | list of regular expressions | `[]` |
 | [`hide_labels`](#show_labels-and-hide_labels) | list of regular expressions | `[]` |
+| [`sort`](#sort) | string | `updated desc` |
 | [`token`](#token) | string | none |
 
 Settings tglab doesn't recognise are ignored, so a typo in a name means that setting keeps its
@@ -89,6 +90,25 @@ The patterns use [Go's regular expression syntax](https://pkg.go.dev/regexp/synt
 - An invalid pattern stops tglab at startup with an error naming the setting and the file.
 
 Labels hidden this way also don't count as changes for the `●` marker.
+
+### `sort`
+
+The row order tglab starts with: a column, optionally followed by `asc` or `desc`.
+
+- Columns: `updated`, `mr`, `project`, `author`, `title`, `pipeline`, `approvals`, `threads`,
+  `status`. Without a direction, each uses the one `s` starts it in (see
+  [Sorting](../README.md#sorting)): `updated`, `mr`, `approvals` and `threads` descending, the rest
+  ascending.
+- `none` keeps the order GitLab sends: project by project, in the order of `projects`, each most
+  recently updated first. It takes no direction.
+- Case doesn't matter. Anything else stops tglab at startup with an error naming the file.
+- `s` and `S` change the order while tglab runs; the change isn't saved.
+
+```yaml
+sort: status          # most urgent first
+sort: title desc
+sort: none
+```
 
 ### `token`
 
