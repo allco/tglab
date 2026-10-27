@@ -30,6 +30,7 @@ covers what you need to keep working on it.
 | `ui.go` | Bubble Tea model: keys, refresh loop, table rendering, status and colours |
 | `splash.go` | start-up splash and the small corner logo |
 | `*_test.go` | unit tests; `screenshot_test.go` renders the README screenshots |
+| `scripts/build.sh`, `scripts/install.sh` | build with `git describe` as the version; install into `~/bin` (or `$INSTALL_DIR`) |
 | `scripts/screenshots.sh` | turns the rendered screens into `docs/screenshots/*.png` |
 | `.github/workflows/post-merge.yml` | "Post merge": gofmt, vet, test, build on each push to `main` |
 | `.github/workflows/release.yml` | on a `vX.Y.Z` tag: test, cross-compile, publish a GitHub release |

@@ -25,7 +25,8 @@ The screenshots use made-up data.
 ## Build and run
 
 ```sh
-go build -o tglab .
+scripts/build.sh                 # ./tglab, with `git describe` as its --version
+scripts/install.sh               # or build it into ~/bin (or $INSTALL_DIR)
 ./tglab                          # uses the settings file described below
 ./tglab --config path/to/config.yaml
 ./tglab --help                   # also --usage and -h
@@ -177,6 +178,7 @@ To regenerate the screenshots after a UI change, install
 | File | Contains |
 |---|---|
 | `docs/configuration.md` | settings reference and examples |
+| `scripts/build.sh`, `scripts/install.sh` | build with the version from `git describe`; install into `~/bin` |
 | `screenshot_test.go`, `scripts/screenshots.sh` | renders the README screenshots from made-up MRs |
 | `main.go` | flags, `--help` text, startup |
 | `config.go` | settings file lookup, defaults, label patterns, token lookup |
