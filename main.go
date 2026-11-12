@@ -16,6 +16,8 @@ var version = "dev"
 func main() {
 	configFlag := flag.String("config", "", "path to the settings file")
 	showVersion := flag.Bool("version", false, "print the version")
+	update := flag.Bool("update", false, "update to the newest release, after asking")
+	noUpdateCheck := flag.Bool("no-update-check", false, "don't look for newer releases")
 	var help bool
 	for _, name := range []string{"help", "h", "usage"} {
 		flag.BoolVar(&help, name, false, "show this help")
@@ -28,6 +30,12 @@ func main() {
 	}
 	if *showVersion {
 		fmt.Println("tglab", version)
+		return
+	}
+	if *update {
+		if err := updateCLI("tglab", version, os.Stdin, os.Stdout); err != nil {
+			fail(err)
+		}
 		return
 	}
 
@@ -45,9 +53,14 @@ func main() {
 		fail(err)
 	}
 
-	p := tea.NewProgram(newModel(cfg, NewClient(cfg.Host, token, fromGlab)), tea.WithAltScreen())
-	if _, err := p.Run(); err != nil {
+	m := newModel(cfg, NewClient(cfg.Host, token, fromGlab))
+	m.upd = newUpdater("tglab", version, *noUpdateCheck || os.Getenv("TGLAB_NO_UPDATE_CHECK") != "")
+	final, err := tea.NewProgram(m, tea.WithAltScreen()).Run()
+	if err != nil {
 		fail(err)
+	}
+	if fm, ok := final.(model); ok && fm.upd.Restart != "" {
+		fail(restart(fm.upd.Restart))
 	}
 }
 
@@ -68,12 +81,18 @@ func printUsage(w io.Writer, configFlag string) {
 Usage:
   tglab [--config <path>]
   tglab --help | --usage | --version
+  tglab --update
 
 Options:
   --config <path>   settings file to use
+  --update          update to the newest release, after asking
+  --no-update-check don't look for newer releases (or set TGLAB_NO_UPDATE_CHECK=1)
   -h, --help, --usage
                     show this help
   --version         print the version
+
+tglab looks for a newer release at start and once a day; the status line shows one, and u
+updates (after asking).
 
 Settings file (YAML), first match wins:
   1. --config <path>
@@ -97,6 +116,7 @@ Keys:
   s              sort by the next column (the header marks it ▲/▼), then none
   S              reverse the sort
   r              refresh now
+  u              update to a newer release, when the status line shows one
   q, ctrl+c      quit
 `, version, defaultConfigPath(), path, state, indent(defaultConfig, "  "))
 }

@@ -29,6 +29,8 @@ scripts/build.sh                 # ./tglab, with `git describe` as its --version
 scripts/install.sh               # or build it into ~/bin (or $INSTALL_DIR)
 ./tglab                          # uses the settings file described below
 ./tglab --config path/to/config.yaml
+./tglab --update                 # update to the newest release, after asking
+./tglab --no-update-check        # don't look for newer releases
 ./tglab --help                   # also --usage and -h
 ./tglab --version
 ```
@@ -111,6 +113,7 @@ The first of these that is set is used:
 | `s` | sort by the next column, see [Sorting](#sorting) |
 | `S` | reverse the sort |
 | `r` | refresh now |
+| `u` | update to a newer release, when the status line shows one (see [Updates](#updates)) |
 | `q` / `ctrl+c` | quit |
 
 ## Views and refreshing
@@ -125,6 +128,21 @@ request. In the all view an **Author** column appears, with your own username hi
 
 The selection stays on the same MR across refreshes and view switches, and clears if that MR is no
 longer shown.
+
+## Updates
+
+tglab looks for a newer [release](https://github.com/allco/tglab/releases) when it starts and
+then once a day, without holding anything up. When there is one, the status line shows
+`v1.3.0 available · u update`. `u` asks before it does anything; `y` downloads the binary for
+your platform, checks it against the release's `checksums.txt`, puts it in place of the running
+one and offers to restart. `tglab --update` does the same from the command line.
+
+- Pre-releases are never offered. A build from a checkout (`v1.2.0-3-gabc1234`) counts as the
+  tag it is based on; a `dev` build (plain `go build`) never checks.
+- A failed check (offline, rate-limited) stays quiet. The last answer is kept in your user cache
+  folder (`~/.cache/tglab/update.json` on Linux), so the next start shows it at once.
+- If the binary's folder isn't writable, tglab says so and leaves it alone.
+- `--no-update-check`, or `TGLAB_NO_UPDATE_CHECK=1`, turns the check off.
 
 ## Sorting
 
@@ -213,6 +231,7 @@ To regenerate the screenshots after a UI change, install
 | `config.go` | settings file lookup, defaults, label patterns, token lookup |
 | `gitlab.go` | GraphQL queries and client |
 | `ui.go` | the Bubble Tea app: table rendering, keys, refresh loop |
+| `update.go`, `update_source.go`, `restart*.go` | the update check and self-update; `update_source.go` is where releases come from (GitHub) |
 | `splash.go` | the start-up splash and the corner logo |
 
 ### CI and releases

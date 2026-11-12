@@ -22,6 +22,7 @@ var (
 	headerStyle   = lipgloss.NewStyle().Bold(true)
 	selectedStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("229"))
 	cursorStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("212"))
+	updateStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
 
 	pipelineColors = map[string]lipgloss.Color{
 		"SUCCESS":  lipgloss.Color("42"),
@@ -71,15 +72,18 @@ type model struct {
 	err        error
 	width      int
 	height     int
+
+	upd *updater // newer releases, and updating to one
 }
 
 func newModel(cfg Config, client *Client) model {
 	sp := spinner.New(spinner.WithSpinner(spinner.Dot))
-	return model{cfg: cfg, client: client, sort: cfg.sort, spinner: sp, splash: true, loading: true, cursor: -1, changed: map[string]bool{}}
+	return model{cfg: cfg, client: client, sort: cfg.sort, spinner: sp, splash: true, loading: true, cursor: -1, changed: map[string]bool{},
+		upd: newUpdater("tglab", version, true)}
 }
 
 func (m model) Init() tea.Cmd {
-	return tea.Batch(m.fetchCmd(), m.spinner.Tick, splashCmd())
+	return tea.Batch(m.fetchCmd(), m.spinner.Tick, splashCmd(), m.upd.Init())
 }
 
 func (m model) fetchCmd() tea.Cmd {
@@ -99,6 +103,9 @@ func tickCmd(d time.Duration, gen int) tea.Cmd {
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if ok, cmd := m.upd.Update(msg); ok {
+		return m, cmd
+	}
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
@@ -112,6 +119,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		m.splash = false // any key skips the splash, and still does what it does
+		if ok, cmd := m.upd.Key(msg.String()); ok {
+			return m, cmd
+		}
 		switch msg.String() {
 		case "q", "ctrl+c":
 			return m, tea.Quit
@@ -470,11 +480,18 @@ func (m model) View() string {
 	}
 
 	var status string
+	upd, updErr := m.upd.Status()
 	switch {
+	case m.upd.Asking():
+		status = updateStyle.Render(upd)
 	case m.loading:
 		status = m.spinner.View() + " refreshing…"
 	case m.err != nil:
 		status = errStyle.Render("error: " + m.err.Error())
+	case upd != "" && updErr:
+		status = errStyle.Render(upd)
+	case upd != "":
+		status = updateStyle.Render(upd)
 	default:
 		status = dimStyle.Render(fmt.Sprintf("updated %s · every %s", m.lastUpdate.Format("15:04:05"), m.cfg.RefreshInterval))
 	}

@@ -24,12 +24,15 @@ covers what you need to keep working on it.
 
 | File | Contains |
 |---|---|
-| `main.go` | flags (`--config`, `--help`/`--usage`, `--version`), help text, startup |
+| `main.go` | flags (`--config`, `--help`/`--usage`, `--version`, `--update`, `--no-update-check`), help text, startup, restart after an update |
 | `config.go` | settings file lookup and defaults, label patterns, token lookup and glab renewal |
 | `gitlab.go` | GraphQL queries, the `MR` type, the client with its 401 retry |
 | `sort.go` | sort keys (`s` cycles them), the `sort` setting, pipeline and status ranks |
 | `ui.go` | Bubble Tea model: keys, refresh loop, table rendering, status and colours |
 | `splash.go` | start-up splash and the small corner logo |
+| `update.go` | the self-update: `parseVersion`/`isNewer` (semver; `git describe` builds count as their tag, `dev` never checks), the `update.json` cache, `install` (download, check `checksums.txt`, rename over `os.Executable()`), `updateCLI` (`--update`), and `updater`, which the model holds as a pointer (`Init`, `Update`, `Key`, `Status`, `Asking`). It doesn't depend on tglab; keep it byte for byte the same as tdash's. Tests swap `latestFn`, `fetchFn`, `exeFn` |
+| `update_source.go` | where releases come from: GitHub's API and release downloads (`latestRelease`, `fetchAsset`) |
+| `restart.go`, `restart_windows.go` | `restart`: exec the updated binary (Unix), or run it and exit (Windows) |
 | `*_test.go` | unit tests; `screenshot_test.go` renders the README screenshots |
 | `scripts/build.sh`, `scripts/install.sh` | build with `git describe` as the version; install into `~/bin` (or `$INSTALL_DIR`) |
 | `scripts/screenshots.sh` | turns the rendered screens into `docs/screenshots/*.png` |
@@ -66,6 +69,12 @@ covers what you need to keep working on it.
   merge`, `draft`, `checking`, `waiting for CI`, `needs approval`, `open threads`, `needs rebase`,
   `blocked`, or the raw status in lower case). `statusColor`: green ready, red conflicts/blocked,
   amber needs approval/threads/rebase, blue waiting for CI, purple train/auto-merge, grey the rest.
+- **Updates:** `m.upd` is a `*updater`, so the value-receiver model copies share it; `main` reads
+  `Restart` from the model `Run()` returns. It sees messages and keys before the model; an open
+  question ("Update tglab A → B? y/n", "restart now? y/n") takes every key and wins the status
+  line, an update error shows in red, and otherwise a newer release replaces the "updated …" text
+  (loading and fetch errors still come first). `newModel` makes it off; `main` turns it on unless
+  `--no-update-check` or `TGLAB_NO_UPDATE_CHECK` is set.
 - **Splash:** shown for at least 1.2 s and until the first load ends; any key skips it. Afterwards
   a 3-line logo sits at the bottom right, beside the status and help lines, only when the rows
   leave two empty lines and the lines are short enough.
