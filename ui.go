@@ -22,7 +22,6 @@ var (
 	headerStyle   = lipgloss.NewStyle().Bold(true)
 	selectedStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("229"))
 	cursorStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("212"))
-	updateStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
 
 	pipelineColors = map[string]lipgloss.Color{
 		"SUCCESS":  lipgloss.Color("42"),
@@ -480,18 +479,18 @@ func (m model) View() string {
 	}
 
 	var status string
-	upd, updErr := m.upd.Status()
+	// A new release, or a question about it, stays in view through refreshes; only a failed
+	// fetch shows instead.
+	upd := m.upd.StatusView()
 	switch {
 	case m.upd.Asking():
-		status = updateStyle.Render(upd)
-	case m.loading:
-		status = m.spinner.View() + " refreshing…"
+		status = upd
 	case m.err != nil:
 		status = errStyle.Render("error: " + m.err.Error())
-	case upd != "" && updErr:
-		status = errStyle.Render(upd)
 	case upd != "":
-		status = updateStyle.Render(upd)
+		status = upd
+	case m.loading:
+		status = m.spinner.View() + " refreshing…"
 	default:
 		status = dimStyle.Render(fmt.Sprintf("updated %s · every %s", m.lastUpdate.Format("15:04:05"), m.cfg.RefreshInterval))
 	}
