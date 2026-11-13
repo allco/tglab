@@ -224,3 +224,32 @@ func TestUpdateInStatusLine(t *testing.T) {
 		t.Errorf("after the question, j selected %d", m.cursor)
 	}
 }
+
+func TestBrewInstallDoesNotSelfUpdate(t *testing.T) {
+	fakeRelease(t, "v1.3.0", false)
+	cellar := filepath.Join(t.TempDir(), "Cellar", "tglab", "1.2.0", "bin", "tglab")
+	if err := os.MkdirAll(filepath.Dir(cellar), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(cellar, []byte("old"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(t.TempDir(), "tglab")
+	if err := os.Symlink(cellar, link); err != nil {
+		t.Skip("no symlinks:", err)
+	}
+	exeFn = func() (string, error) { return link, nil }
+	if !brewManaged() {
+		t.Fatal("a symlink into a Cellar isn't seen as a Homebrew install")
+	}
+	if u := newUpdater("tglab", "v1.2.0", false); !u.off {
+		t.Error("the updater is on for a Homebrew install")
+	}
+	var out strings.Builder
+	if err := updateCLI("tglab", "v1.2.0", strings.NewReader("y\n"), &out); err == nil || !strings.Contains(err.Error(), "brew upgrade tglab") {
+		t.Errorf("--update: err %v", err)
+	}
+	if b, _ := os.ReadFile(cellar); string(b) != "old" {
+		t.Errorf("the Homebrew binary changed to %q", b)
+	}
+}
