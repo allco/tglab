@@ -22,6 +22,14 @@ The screenshots use made-up data.
 - A GitLab token with the `read_api` scope. If you're logged in with
   [`glab`](https://gitlab.com/gitlab-org/cli), nothing else is needed.
 
+## Install
+
+With [Homebrew](https://brew.sh) (macOS and Linux):
+
+```sh
+brew install allco/tap/tglab
+```
+
 ## Build and run
 
 ```sh
@@ -143,6 +151,8 @@ one and offers to restart. `tglab --update` does the same from the command line.
   folder (`~/.cache/tglab/update.json` on Linux), so the next start shows it at once.
 - If the binary's folder isn't writable, tglab says so and leaves it alone.
 - `--no-update-check`, or `TGLAB_NO_UPDATE_CHECK=1`, turns the check off.
+- A Homebrew install never updates itself (the status line stays quiet and `--update` says
+  so); `brew upgrade tglab` updates it.
 
 ## Sorting
 
